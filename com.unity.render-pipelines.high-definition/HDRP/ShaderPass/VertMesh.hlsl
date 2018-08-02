@@ -96,17 +96,13 @@ VaryingsToDS InterpolateWithBaryCoordsToDS(VaryingsToDS input0, VaryingsToDS inp
 // Make it inout so that VelocityPass can get the modified input values later.
 VaryingsMeshType VertMesh(inout AttributesMesh input)
 {
-#if defined(HAVE_MESH_MODIFICATION)
-    input = ApplyMeshModification(input, _Time);
-#endif
-
     VaryingsMeshType output;
 
     UNITY_SETUP_INSTANCE_ID(input);
     UNITY_TRANSFER_INSTANCE_ID(input, output);
 
-#if defined(HAVE_VERTEX_MODIFICATION)
-    ApplyPreVertexModification(input);
+#if defined(HAVE_MESH_MODIFICATION)
+    input = ApplyMeshModification(input, _Time);
 #endif
 
     // This return the camera relative position (if enable)

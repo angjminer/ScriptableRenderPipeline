@@ -13,10 +13,6 @@ float3 GetVertexDisplacement(float3 positionRWS, float3 normalWS, float2 texCoor
     return ComputePerVertexDisplacement(layerTexCoord, vertexColor, lod);
 }
 
-void ApplyPreVertexModification(inout AttributesMesh input)
-{
-}
-
 // Note: positionWS can be either in camera relative space or not
 // Time is _Time or _LastTime depends if we call it from velocity pass or not
 AttributesMesh ApplyMeshModification(AttributesMesh input, float4 time)
