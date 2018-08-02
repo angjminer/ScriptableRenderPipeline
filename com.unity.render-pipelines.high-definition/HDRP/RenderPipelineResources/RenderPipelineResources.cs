@@ -112,6 +112,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             defaultMirrorMaterial = Load<Material>(HDRenderPipelinePath + "RenderPipelineResources/DefaultHDMirrorMaterial.mat");
 
             defaultDecalMaterial = Load<Material>(HDRenderPipelinePath + "RenderPipelineResources/DefaultHDDecalMaterial.mat");
+            defaultTerrainMaterial = Load<Material>(HDRenderPipelinePath + "RenderPipelineResources/DefaultHDTerrainMaterial.mat");
             defaultShader = Load<Shader>(HDRenderPipelinePath + "Material/Lit/Lit.shader");
 
             debugFontTexture = Load<Texture2D>(HDRenderPipelinePath + "RenderPipelineResources/DebugFont.tga");
