@@ -4,6 +4,19 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.2.0-preview]
+
+### Added
+- Added a luminance meter in the debug menu
+
+### Fixed
+- Fix issue with package upgrading (HDRP resources asset is now versionned to worarkound package manager limitation)
+- Fix HDReflectionProbe offset displayed in gizmo different than what is affected.
+- Fix decals getting into a state where they could not be removed or disabled.
+- Fix lux meter mode - The lux meter isn't affected by the sky anymore
+- Fix area light size reset when multi-selected
+- Fixed filter pass number in HDUtils.BlitQuad
+
 ## [3.1.0-preview]
 
 ### Added
@@ -19,6 +32,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Split EmissiveColor and bakeDiffuseLighting in forward avoiding the emissiveColor to be affect by SSAO
 - Added a volume to control indirect light intensity
 - Added EV 100 intensity unit for area lights
+- Added support for RendererPriority on Renderer. This allow to control order of transparent rendering manually. HDRP have now two stage of sorting for transparent in addition to bact to front. Material have a priority then Renderer have a priority.
+- Add Coupling of (HD)Camera and HDAdditionalCameraData for reset and remove in inspector contextual menu of Camera
+- Add Coupling of (HD)ReflectionProbe and HDAdditionalReflectionData for reset and remove in inspector contextual menu of ReflectoinProbe
+- Add macro to forbid unity_ObjectToWorld/unity_WorldToObject to be use as it doesn't handle camera relative rendering
+- Add opacity control on contact shadow
 
 ### Fixed
 - Fixed an issue with PreIntegratedFGD texture being sometimes destroyed and not regenerated causing rendering to break
@@ -42,13 +60,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Refactor shader code: GetBakedDiffuseLighting is not call anymore in GBuffer or forward pass, including the ConvertSurfaceDataToBSDFData and GetPreLightData, this is done in ModifyBakedDiffuseLighting now
 - Refactor shader code: Added a backBakeDiffuseLighting to BuiltinData to handle lighting for transmission
 - Refactor shader code: Material must now call InitBuiltinData (Init all to zero + init bakeDiffuseLighting and backBakeDiffuseLighting ) and PostInitBuiltinData
-
-### Added
-- Added support for RendererPriority on Renderer. This allow to control order of transparent rendering manually. HDRP have now two stage of sorting for transparent in addition to bact to front. Material have a priority then Renderer have a priority.
-- Add Coupling of (HD)Camera and HDAdditionalCameraData for reset and remove in inspector contextual menu of Camera
-- Add Coupling of (HD)ReflectionProbe and HDAdditionalReflectionData for reset and remove in inspector contextual menu of ReflectoinProbe
-- Add macro to forbid unity_ObjectToWorld/unity_WorldToObject to be use as it doesn't handle camera relative rendering
-- Add opacity control on contact shadow
 
 ## [3.0.0-preview]
 
