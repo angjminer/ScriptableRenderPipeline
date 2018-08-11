@@ -104,8 +104,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 {
                     // Treat decal projector bounds as a crop tool, rather than a scale tool.
                     // Compute a new uv scale and bias terms to pin decal projection pixels in world space, irrespective of projector bounds.
-                    m_DecalProjectorComponent.m_UVScale.x *= (boundsSizeCurrentOS.x) / Mathf.Max(1e-5f, boundsSizePreviousOS.x);
-                    m_DecalProjectorComponent.m_UVScale.y *= (boundsSizeCurrentOS.z) / Mathf.Max(1e-5f, boundsSizePreviousOS.z);
+                    m_DecalProjectorComponent.m_UVScale.x *= Mathf.Max(1e-5f, boundsSizeCurrentOS.x) / Mathf.Max(1e-5f, boundsSizePreviousOS.x);
+                    m_DecalProjectorComponent.m_UVScale.y *= Mathf.Max(1e-5f, boundsSizeCurrentOS.z) / Mathf.Max(1e-5f, boundsSizePreviousOS.z);
 
                     m_DecalProjectorComponent.m_UVBias.x += (boundsMinCurrentOS.x - boundsMinPreviousOS.x) / Mathf.Max(1e-5f, boundsSizeCurrentOS.x) * m_DecalProjectorComponent.m_UVScale.x;
                     m_DecalProjectorComponent.m_UVBias.y += (boundsMinCurrentOS.z - boundsMinPreviousOS.z) / Mathf.Max(1e-5f, boundsSizeCurrentOS.z) * m_DecalProjectorComponent.m_UVScale.y;
