@@ -784,6 +784,69 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             else if (!haveLegacyGizmoForOldShape && haveLegacyGizmoForNewShape)
                 base.EnableGizmo();
         }
+
+        [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
+        static void DrawGizmoForHDAdditionalLightData(HDAdditionalLightData src, GizmoType gizmoType)
+        {
+            bool selected = (gizmoType & GizmoType.Selected) != 0;
+
+            var light = src.gameObject.GetComponent<Light>();
+            Color previousColor = Gizmos.color;
+            Gizmos.color = light.enabled ? LightEditor.kGizmoLight : LightEditor.kGizmoDisabledLight;
+
+            switch (src.lightTypeExtent)
+            {
+                case LightTypeExtent.Punctual:
+                    switch (light.type)
+                    {
+                        case LightType.Directional:
+                        case LightType.Point:
+                            //handled by legacy
+                            break;
+                        case LightType.Spot:
+                            switch (src.spotLightShape)
+                            {
+                                case SpotLightShape.Cone:
+                                    CoreLightEditorUtilities.DrawSpotlightGizmo(light, src.GetInnerSpotPercent01(), selected);
+                                    break;
+                                case SpotLightShape.Pyramid:
+                                case SpotLightShape.Box:
+                                    HDLightEditorUtilities.DrawFrustumlightGizmo(light);
+                                    break;
+                            }
+                            break;
+                        case LightType.Rectangle:
+                        case LightType.Disc:
+                            //[TODO:] check what is the current state on area shape
+                            break;
+                    }
+                    break;
+                case LightTypeExtent.Rectangle:
+                case LightTypeExtent.Line:
+                    CoreLightEditorUtilities.DrawArealightGizmo(light);
+                    break;
+            }
+
+            if (selected)
+            {
+                // Trace a ray down to better locate the light location
+                Ray ray = new Ray(src.gameObject.transform.position, Vector3.down);
+                RaycastHit hit;
+                if (Physics.Raycast(ray, out hit))
+                {
+                    Handles.color = Color.green;
+                    Handles.zTest = UnityEngine.Rendering.CompareFunction.LessEqual;
+                    Handles.DrawLine(src.gameObject.transform.position, hit.point);
+                    Handles.DrawWireDisc(hit.point, hit.normal, 0.5f);
+
+                    Handles.color = Color.red;
+                    Handles.zTest = UnityEngine.Rendering.CompareFunction.Greater;
+                    Handles.DrawLine(src.gameObject.transform.position, hit.point);
+                    Handles.DrawWireDisc(hit.point, hit.normal, 0.5f);
+                }
+            }
+
+            Gizmos.color = previousColor;
         }
     }
 }
