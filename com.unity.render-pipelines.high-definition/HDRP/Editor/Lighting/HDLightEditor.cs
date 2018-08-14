@@ -143,6 +143,30 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         bool m_UpdateAreaLightEmissiveMeshComponents = false;
 
+        protected override void EnableGizmo()
+        {
+            switch (m_LightShape)
+            {
+                case LightShape.Directional:
+                case LightShape.Point:
+                    base.EnableGizmo();
+                    break;
+            }
+            //do nothing for others as we have our own gizmos
+        }
+
+        protected override void DisableGizmo()
+        {
+            switch (m_LightShape)
+            {
+                case LightShape.Directional:
+                case LightShape.Point:
+                    base.EnableGizmo();
+                    break;
+            }
+            //do nothing for others as we have our own gizmos
+        }
+
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -242,6 +266,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
             */
 
+            LightShape oldShape = m_LightShape;
+
             // New editor
             ApplyAdditionalComponentsVisibility(true);
             CheckStyles();
@@ -253,6 +279,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             DrawFoldout(m_AdditionalLightData.showFeatures, "Features", DrawFeatures);
             DrawFoldout(settings.lightType, "Shape", DrawShape);
             DrawFoldout(settings.intensity, "Light", DrawLightSettings);
+
+            ResolveLightShapeGizmo(oldShape);
 
             if (settings.shadowsType.enumValueIndex != (int)LightShadows.None)
                 DrawFoldout(settings.shadowsType, "Shadows", DrawShadows);
@@ -266,6 +294,23 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
             if (m_UpdateAreaLightEmissiveMeshComponents)
                 UpdateAreaLightEmissiveMeshComponents();
+        }
+
+        protected override void OnSceneGUI()
+        {
+            m_SerializedAdditionalLightData.Update();
+
+            if (((HDAdditionalLightData)m_SerializedAdditionalLightData.targetObject).lightTypeExtent == LightTypeExtent.Punctual)
+            {
+                switch (((Light)target).type)
+                {
+                    case LightType.Directional:
+                    case LightType.Point:
+                        base.OnSceneGUI();
+                        break;
+                }
+            }
+            //do nothing for others as we have our own handles
         }
 
         void DrawFoldout(SerializedProperty foldoutProperty, string title, Action func)
@@ -726,6 +771,19 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                         break;
                 }
             }
+
+        }
+
+        void ResolveLightShapeGizmo(LightShape oldShape)
+        {
+            //see if legacy gizmo activation switched
+            bool haveLegacyGizmoForOldShape = oldShape == LightShape.Directional || oldShape == LightShape.Point;
+            bool haveLegacyGizmoForNewShape = m_LightShape == LightShape.Directional || m_LightShape == LightShape.Point;
+            if (haveLegacyGizmoForOldShape && !haveLegacyGizmoForNewShape)
+                base.DisableGizmo();
+            else if (!haveLegacyGizmoForOldShape && haveLegacyGizmoForNewShape)
+                base.EnableGizmo();
+        }
         }
     }
 }
