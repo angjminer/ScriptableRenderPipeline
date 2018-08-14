@@ -11,8 +11,7 @@ namespace UnityEditor.Experimental.Rendering
         public static void DrawWireDisc(Quaternion q, Vector3 position, Vector3 axis, float radius)
         {
             Matrix4x4 rotation = Matrix4x4.TRS(Vector3.zero, q, Vector3.one);
-
-            Gizmos.color = Color.white;
+            
             float theta = 0.0f;
             float x = radius * Mathf.Cos(theta);
             float y = radius * Mathf.Sin(theta);
@@ -59,8 +58,11 @@ namespace UnityEditor.Experimental.Rendering
             if (selected)
             {
                 //Draw Range Arcs
-                Handles.DrawWireArc(spotlight.gameObject.transform.position, spotlight.gameObject.transform.right, vectorLineUp, spotlight.spotAngle, spotlight.range);
-                Handles.DrawWireArc(spotlight.gameObject.transform.position, spotlight.gameObject.transform.up, vectorLineLeft, spotlight.spotAngle, spotlight.range);
+                using (new Handles.DrawingScope(Gizmos.color))
+                {
+                    Handles.DrawWireArc(spotlight.gameObject.transform.position, spotlight.gameObject.transform.right, vectorLineUp, spotlight.spotAngle, spotlight.range);
+                    Handles.DrawWireArc(spotlight.gameObject.transform.position, spotlight.gameObject.transform.up, vectorLineLeft, spotlight.spotAngle, spotlight.range);
+                }
                 //Draw Near Plane Disc
                 if (spotlight.shadows != LightShadows.None)
                     DrawWireDisc(spotlight.gameObject.transform.rotation, spotlight.gameObject.transform.position + spotlight.gameObject.transform.forward * nearDiscDistance, spotlight.gameObject.transform.forward, nearDiscRadius);
