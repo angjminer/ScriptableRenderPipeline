@@ -300,17 +300,65 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         {
             m_SerializedAdditionalLightData.Update();
 
-            if (((HDAdditionalLightData)m_SerializedAdditionalLightData.targetObject).lightTypeExtent == LightTypeExtent.Punctual)
+            HDAdditionalLightData src = (HDAdditionalLightData)m_SerializedAdditionalLightData.targetObject;
+            Light light = (Light)target;
+
+            switch (src.lightTypeExtent)
             {
-                switch (((Light)target).type)
-                {
-                    case LightType.Directional:
-                    case LightType.Point:
-                        base.OnSceneGUI();
-                        break;
-                }
+                case LightTypeExtent.Punctual:
+                    switch (light.type)
+                    {
+                        case LightType.Directional:
+                        case LightType.Point:
+                            base.OnSceneGUI();  //use legacy handles
+                            break;
+                        case LightType.Spot:
+                            switch (src.spotLightShape)
+                            {
+                                case SpotLightShape.Cone:
+                                    //handle spot handles here;
+                                    break;
+                                case SpotLightShape.Pyramid:
+                                    float tanfov = Mathf.Tan(Mathf.Deg2Rad * light.spotAngle * 0.5f);
+                                    float baseSize = light.range * tanfov * 2f;
+                                    Vector2 size = src.aspectRatio > 1f ? new Vector2(baseSize * src.aspectRatio, baseSize) : new Vector2(baseSize, baseSize / src.aspectRatio);
+                                    EditorGUI.BeginChangeCheck();
+                                    Vector2 newSize = Handles.RectHandle(light.transform.rotation, light.transform.position + light.transform.forward * light.range, size, true);
+
+                                    float newRange = light.range;
+                                    Vector3 position = light.transform.position + light.transform.forward * light.range;
+                                    float sizeHandle = HandleUtility.GetHandleSize(position);
+                                    bool temp = GUI.changed;
+                                    GUI.changed = false;
+                                    position = Handles.Slider(position, light.transform.forward, sizeHandle * 0.03f, Handles.DotHandleCap, 0f);
+                                    if (GUI.changed)
+                                        newRange = Vector3.Dot(position - light.transform.position, light.transform.forward);
+                                    GUI.changed |= temp;
+                                    
+                                    if (EditorGUI.EndChangeCheck())
+                                    {
+                                        Undo.RecordObjects(new UnityEngine.Object[] { target, src }, "Adjust Pyramid Spot Light");
+                                        float oldRatio = src.aspectRatio;
+                                        if (oldRatio >= 1 /*&& size.y > newSize.y*/)
+                                        {
+                                            light.spotAngle = 2f * Mathf.Rad2Deg * Mathf.Atan(0.5f * newSize.y / light.range);
+                                        }
+                                        else if (oldRatio <= 1/* && size.x > newSize.x*/)
+                                        {
+                                            light.spotAngle = 2f * Mathf.Rad2Deg * Mathf.Atan(0.5f * newSize.x / light.range);
+                                        }
+                                        src.aspectRatio = Mathf.Clamp(newSize.x / newSize.y, 0.05f, 20f);
+                                        light.range = newRange;
+                                    }
+                                    break;
+                                case SpotLightShape.Box:
+                                    //TODO
+                                    break;
+                            }
+                            break;
+                    }
+                    break;
             }
-            //do nothing for others as we have our own handles
         }
 
         void DrawFoldout(SerializedProperty foldoutProperty, string title, Action func)
