@@ -110,6 +110,7 @@ namespace UnityEditor.Experimental.Rendering
             Gizmos.DrawWireSphere(arealight.transform.position, arealight.range);
         }
 
+        [Obsolete("Should use the legacy gizmo draw or at least a DrawWireSphereTwoShaded now exposed")]
         public static void DrawPointlightGizmo(Light pointlight, bool selected)
         {
             if (pointlight.shadows != LightShadows.None && selected) Gizmos.DrawWireSphere(pointlight.transform.position, pointlight.shadowNearPlane);
@@ -224,6 +225,7 @@ namespace UnityEditor.Experimental.Rendering
             Gizmos.DrawLine(s4, e4);
         }
 
+        [Obsolete("Should use the legacy gizmo draw")]
         public static void DrawDirectionalLightGizmo(Light directionalLight)
         {
             var gizmoSize = 0.2f;
