@@ -14,6 +14,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         protected RenderTargetIdentifier[] m_RTIDs = new RenderTargetIdentifier[k_MaxNormalBuffer];
         bool[] m_ExternalBuffer = new bool[k_MaxNormalBuffer];
 
+        // MSAA version of the buffers
+        RTHandleSystem.RTHandle[] m_ColorMSAAMRTs = new RTHandleSystem.RTHandle[k_MaxNormalBuffer];
+
         RTHandleSystem.RTHandle m_HTile;
 
         public NormalBufferManager()
@@ -28,6 +31,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 // TODO: Provide a way to reuse a render target
                 m_ColorMRTs[0] = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.ARGB32, sRGB: false, name: "NormalBuffer");
                 m_ExternalBuffer[0] = false;
+
+                if(settings.supportMSAA)
+                {
+                    m_ColorMSAAMRTs[0] = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.ARGB32, sRGB: false, enableMSAA: true, name: "NormalBuffer");
+                }
             }
             else
             {
@@ -48,10 +56,26 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             return m_RTIDs;
         }
 
+        public RenderTargetIdentifier[] GetBuffersRTIMSAA()
+        {
+            for (int i = 0; i < normalBufferCount; ++i)
+            {
+                m_RTIDs[i] = m_ColorMSAAMRTs[i].nameID;
+            }
+
+            return m_RTIDs;
+        }
+
         public RTHandleSystem.RTHandle GetNormalBuffer(int index)
         {
             Debug.Assert(index < normalBufferCount);
             return m_ColorMRTs[index];
+        }
+
+        public RTHandleSystem.RTHandle GetNormalBufferMSAA(int index)
+        {
+            Debug.Assert(index < normalBufferCount);
+            return m_ColorMSAAMRTs[index];
         }
 
         public void Build(HDRenderPipelineAsset hdAsset)
@@ -65,6 +89,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 if (!m_ExternalBuffer[i])
                 {
                     RTHandles.Release(m_ColorMRTs[i]);
+                }
+            }
+
+            for (int i = 0; i < k_MaxNormalBuffer; ++i)
+            {
+                if (m_ColorMSAAMRTs != null)
+                {
+                    RTHandles.Release(m_ColorMSAAMRTs[i]);
                 }
             }
         }

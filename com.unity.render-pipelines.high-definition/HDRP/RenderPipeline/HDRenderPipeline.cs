@@ -107,6 +107,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         RTHandleSystem.RTHandle m_AmbientOcclusionBuffer;
         RTHandleSystem.RTHandle m_DistortionBuffer;
 
+        // A set of textures that are MSAA-Only given that the full pipeline is not MSAA
+        RTHandleSystem.RTHandle m_CameraColorMSAABuffer;
+        RTHandleSystem.RTHandle m_CameraDepthStencilMSAABuffer;
+
         // The pass "SRPDefaultUnlit" is a fall back to legacy unlit rendering and is required to support unity 2d + unity UI that render in the scene.
         ShaderPassName[] m_ForwardAndForwardOnlyPassNames = { HDShaderPassNames.s_ForwardOnlyName, HDShaderPassNames.s_ForwardName, HDShaderPassNames.s_SRPDefaultUnlitName };
         ShaderPassName[] m_ForwardOnlyPassNames = { HDShaderPassNames.s_ForwardOnlyName, HDShaderPassNames.s_SRPDefaultUnlitName };
@@ -298,18 +302,18 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             m_SSSBufferManager.InitSSSBuffers(m_GbufferManager, m_Asset.renderPipelineSettings);
             m_NormalBufferManager.InitNormalBuffers(m_GbufferManager, m_Asset.renderPipelineSettings);
 
-            m_CameraColorBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.ARGBHalf, sRGB: false, enableRandomWrite: true, enableMSAA: true, name: "CameraColor");
-            m_CameraSssDiffuseLightingBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.RGB111110Float, sRGB: false, enableRandomWrite: true, enableMSAA: true, name: "CameraSSSDiffuseLighting");
+            // m_CameraSssDiffuseLightingBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.RGB111110Float, sRGB: false, enableRandomWrite: true, name: "CameraSSSDiffuseLighting");
+            m_CameraColorBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.ARGBHalf, sRGB: false, name: "CameraColor");
 
-            m_CameraDepthStencilBuffer = RTHandles.Alloc(Vector2.one, depthBufferBits: DepthBits.Depth24, colorFormat: RenderTextureFormat.Depth, filterMode: FilterMode.Point, bindTextureMS: true, enableMSAA: true, name: "CameraDepthStencil");
+            m_CameraDepthStencilBuffer = RTHandles.Alloc(Vector2.one, depthBufferBits: DepthBits.Depth24, colorFormat: RenderTextureFormat.Depth, filterMode: FilterMode.Point, name: "CameraDepthStencil");
 
             if (NeedDepthBufferCopy())
             {
-                m_CameraDepthBufferCopy = RTHandles.Alloc(Vector2.one, depthBufferBits: DepthBits.Depth24, colorFormat: RenderTextureFormat.Depth, filterMode: FilterMode.Point, bindTextureMS: true, enableMSAA: true, name: "CameraDepthStencilCopy");
+                m_CameraDepthBufferCopy = RTHandles.Alloc(Vector2.one, depthBufferBits: DepthBits.Depth24, colorFormat: RenderTextureFormat.Depth, filterMode: FilterMode.Point, name: "CameraDepthStencilCopy");
             }
 
             // Technically we won't need this buffer in some cases, but nothing that we can determine at init time.
-            m_CameraStencilBufferCopy = RTHandles.Alloc(Vector2.one, depthBufferBits: DepthBits.None, colorFormat: RenderTextureFormat.R8, sRGB: false, filterMode: FilterMode.Point, enableMSAA: true, name: "CameraStencilCopy"); // DXGI_FORMAT_R8_UINT is not supported by Unity
+            m_CameraStencilBufferCopy = RTHandles.Alloc(Vector2.one, depthBufferBits: DepthBits.None, colorFormat: RenderTextureFormat.R8, sRGB: false, filterMode: FilterMode.Point, name: "CameraStencilCopy"); // DXGI_FORMAT_R8_UINT is not supported by Unity
 
             if (m_Asset.renderPipelineSettings.supportSSAO)
             {
@@ -318,7 +322,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             if (m_Asset.renderPipelineSettings.supportMotionVectors)
             {
-                m_VelocityBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: Builtin.GetVelocityBufferFormat(), sRGB: Builtin.GetVelocityBufferSRGBFlag(), enableMSAA: true, name: "Velocity");
+                m_VelocityBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: Builtin.GetVelocityBufferFormat(), sRGB: Builtin.GetVelocityBufferSRGBFlag(), name: "Velocity");
             }
 
             m_DistortionBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: Builtin.GetDistortionBufferFormat(), sRGB: Builtin.GetDistortionBufferSRGBFlag(), name: "Distortion");
@@ -331,6 +335,13 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 m_DebugColorPickerBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.ARGBHalf, sRGB: false, name: "DebugColorPicker");
                 m_DebugFullScreenTempBuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.ARGBHalf, sRGB: false, name: "DebugFullScreen");
+            }
+
+            // Let's create the MSAA textures
+            if (m_Asset.renderPipelineSettings.supportMSAA)
+            {
+                m_CameraDepthStencilMSAABuffer = RTHandles.Alloc(Vector2.one, depthBufferBits: DepthBits.Depth24, colorFormat: RenderTextureFormat.Depth, filterMode: FilterMode.Point, bindTextureMS: true, enableMSAA: true, name: "CameraDepthStencilMSAA");
+                m_CameraColorMSAABuffer = RTHandles.Alloc(Vector2.one, filterMode: FilterMode.Point, colorFormat: RenderTextureFormat.ARGBHalf, sRGB: false, bindTextureMS: true, enableMSAA: true, name: "CameraColorMSAA");
             }
         }
 
@@ -354,6 +365,12 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             RTHandles.Release(m_DebugColorPickerBuffer);
             RTHandles.Release(m_DebugFullScreenTempBuffer);
+
+            if (m_Asset.renderPipelineSettings.supportMSAA)
+            {
+                RTHandles.Release(m_CameraColorMSAABuffer);
+                RTHandles.Release(m_CameraDepthStencilMSAABuffer);
+            }
 
             m_DebugScreenSpaceTracingData.Release();
 
@@ -955,6 +972,37 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     // TODO: Add stereo occlusion mask
                     RenderDepthPrepass(m_CullResults, hdCamera, renderContext, cmd);
 
+                    if (m_Asset.renderPipelineSettings.supportMSAA)
+                    {
+                        HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorBuffer, m_CameraDepthStencilBuffer);
+                        MaterialPropertyBlock block = new MaterialPropertyBlock();
+                        block.SetTexture("_DepthTextureMS", m_CameraDepthStencilMSAABuffer.rt);
+                        Material depthResolve = new Material(Shader.Find("Hidden/HDRenderPipeline/DepthResolve"));
+                        switch (m_Asset.renderPipelineSettings.msaaSampleCount)
+                        {
+                            case MSAASamples.None:
+                                {
+                                    cmd.DrawProcedural(Matrix4x4.identity, depthResolve, 0, MeshTopology.Triangles, 3, 1, block);
+                                }
+                                break;
+                            case MSAASamples.MSAA2x:
+                                {
+                                    cmd.DrawProcedural(Matrix4x4.identity, depthResolve, 1, MeshTopology.Triangles, 3, 1, block);
+                                }
+                                break;
+                            case MSAASamples.MSAA4x:
+                                {
+                                    cmd.DrawProcedural(Matrix4x4.identity, depthResolve, 2, MeshTopology.Triangles, 3, 1, block);
+                                }
+                                break;
+                            case MSAASamples.MSAA8x:
+                                {
+                                    cmd.DrawProcedural(Matrix4x4.identity, depthResolve, 3, MeshTopology.Triangles, 3, 1, block);
+                                }
+                                break;
+                        };
+                    }
+
                     // This will bind the depth buffer if needed for DBuffer)
                     RenderDBuffer(hdCamera, cmd, renderContext, m_CullResults);
 
@@ -1083,9 +1131,40 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                         RenderForward(m_CullResults, hdCamera, renderContext, cmd, ForwardPass.Opaque);
 
+                        if(m_Asset.renderPipelineSettings.supportMSAA)
+                        {
+                            HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorBuffer);
+                            MaterialPropertyBlock block = new MaterialPropertyBlock();
+                            block.SetTexture("_ColorTextureMS", m_CameraColorMSAABuffer.rt);
+                            block.SetVector("_ScreenSize", new Vector2(m_CameraColorMSAABuffer.rt.width, m_CameraColorMSAABuffer.rt.height));
+                            Material colorResolve = new Material(Shader.Find("Hidden/HDRenderPipeline/ColorResolve"));
+                            switch(m_Asset.renderPipelineSettings.msaaSampleCount)
+                            {
+                                case MSAASamples.None:
+                                {
+                                    cmd.DrawProcedural(Matrix4x4.identity, colorResolve, 0, MeshTopology.Triangles, 3, 1, block);
+                                }
+                                break;
+                                case MSAASamples.MSAA2x:
+                                {
+                                    cmd.DrawProcedural(Matrix4x4.identity, colorResolve, 1, MeshTopology.Triangles, 3, 1, block);
+                                }
+                                break;
+                                case MSAASamples.MSAA4x:
+                                {
+                                    cmd.DrawProcedural(Matrix4x4.identity, colorResolve, 2, MeshTopology.Triangles, 3, 1, block);
+                                }
+                                break;
+                                case MSAASamples.MSAA8x:
+                                {
+                                    cmd.DrawProcedural(Matrix4x4.identity, colorResolve, 3, MeshTopology.Triangles, 3, 1, block);
+                                }
+                                break;
+                            };
+                        }
+
                         // SSS pass here handle both SSS material from deferred and forward
-                        m_SSSBufferManager.SubsurfaceScatteringPass(hdCamera, cmd, diffusionProfileSettings,
-                            m_CameraColorBuffer, m_CameraSssDiffuseLightingBuffer, m_CameraDepthStencilBuffer, GetDepthTexture());
+                        // m_SSSBufferManager.SubsurfaceScatteringPass(hdCamera, cmd, diffusionProfileSettings, m_CameraColorBuffer, m_CameraSssDiffuseLightingBuffer, m_CameraDepthStencilBuffer, GetDepthTexture());
 
                         RenderSky(hdCamera, cmd);
 
@@ -1371,7 +1450,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 {
                     cmd.EnableShaderKeyword("WRITE_NORMAL_BUFFER");
 
-                    HDUtils.SetRenderTarget(cmd, hdCamera, m_NormalBufferManager.GetBuffersRTI(), m_CameraDepthStencilBuffer);
+                    if(m_Asset.renderPipelineSettings.supportMSAA)
+                    {
+                        HDUtils.SetRenderTarget(cmd, hdCamera, m_NormalBufferManager.GetBuffersRTIMSAA(), m_CameraDepthStencilMSAABuffer);
+                    }
+                    else
+                    {
+                        HDUtils.SetRenderTarget(cmd, hdCamera, m_NormalBufferManager.GetBuffersRTI(), m_CameraDepthStencilBuffer);
+                    }
 
                     // Full forward: Output normal buffer for both forward and forwardOnly
                     RenderOpaqueRenderList(cull, hdCamera, renderContext, cmd, m_DepthOnlyAndDepthForwardOnlyPassNames, 0, HDRenderQueue.k_RenderQueue_AllOpaque);
@@ -1631,7 +1717,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     }
                     else
                     {
-                        HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorBuffer, m_CameraDepthStencilBuffer);
+                        if(m_Asset.renderPipelineSettings.supportMSAA)
+                        {
+                            HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorMSAABuffer, m_CameraDepthStencilMSAABuffer);
+                        }
+                        else
+                        {
+                            HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorBuffer, m_CameraDepthStencilBuffer);
+                        }
                     }
 
                     var passNames = hdCamera.frameSettings.enableForwardRenderingOnly
@@ -2007,6 +2100,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     if (hdCamera.clearDepth)
                     {
                         HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorBuffer, m_CameraDepthStencilBuffer, ClearFlag.Depth);
+                        if (m_Asset.renderPipelineSettings.supportMSAA)
+                        {
+                            HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorMSAABuffer, m_CameraDepthStencilMSAABuffer, ClearFlag.Depth);
+                        }
                     }
                 }
 
@@ -2030,13 +2127,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                             clearColor = Color.black;
 
                         HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorBuffer, m_CameraDepthStencilBuffer, ClearFlag.Color, clearColor);
+                        if (m_Asset.renderPipelineSettings.supportMSAA)
+                        {
+                            HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraColorMSAABuffer, m_CameraDepthStencilMSAABuffer, ClearFlag.Color, clearColor);
+                        }
                     }
                 }
 
                 // Clear the diffuse SSS lighting target
                 using (new ProfilingSample(cmd, "Clear SSS diffuse target", CustomSamplerId.ClearSSSDiffuseTarget.GetSampler()))
                 {
-                    HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraSssDiffuseLightingBuffer, ClearFlag.Color, CoreUtils.clearColorAllBlack);
+                    // HDUtils.SetRenderTarget(cmd, hdCamera, m_CameraSssDiffuseLightingBuffer, ClearFlag.Color, CoreUtils.clearColorAllBlack);
                 }
 
                 // We don't need to clear the GBuffers as scene is rewrite and we are suppose to only access valid data (invalid data are tagged with stencil as StencilLightingUsage.NoLighting),

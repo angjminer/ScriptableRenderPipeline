@@ -92,7 +92,10 @@ namespace UnityEngine.Experimental.Rendering
 
             bool msaaSamplesChanged = msaa && (msaaSamples != m_ScaledRTCurrentMSAASamples);
             if (width > GetMaxWidth(category) || height > GetMaxHeight(category) || msaaSamplesChanged)
-                Resize(width, height, category, msaaSamples);
+            {
+                Resize(width, height, RTCategory.Regular, msaaSamples);
+                Resize(width, height, RTCategory.MSAA, msaaSamples);
+            }
         }
 
         public void ResetReferenceSize(int width, int height, bool msaa, MSAASamples msaaSamples)

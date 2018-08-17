@@ -197,7 +197,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 enableMotionVectors = false;
 
                 // TODO: The work will be implemented piecemeal to support all passes
-                enableDecals = false; // no decals
+                //enableDecals = false; // no decals
                 enableDistortion = false; // no gaussian final color
                 enablePostprocess = false;
                 enableRoughRefraction = false; // no gaussian pre-refraction
