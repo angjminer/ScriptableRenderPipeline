@@ -32,43 +32,39 @@ Shader "Hidden/HDRenderPipeline/ColorResolve"
             return output;
         }
 
-        FragOut Frag1X(Varyings input) : SV_Target
+        FragOut Frag1X(Varyings input)
         {
             FragOut fragOut;
             int2 msTex = int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y);
-            fragOut.color = _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 0);
+            fragOut.color = _ColorTextureMS.Load(msTex, 0);
             return fragOut;
         }
 
-        FragOut Frag2X(Varyings input) : SV_Target
+        FragOut Frag2X(Varyings input)
         {
             FragOut fragOut;
-            fragOut.color = (_ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 0)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 1)) * 0.5f;
+            int2 msTex = int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y);
+            fragOut.color = (_ColorTextureMS.Load(msTex, 0) + _ColorTextureMS.Load(msTex, 1)) * 0.5f;
             return fragOut;
         }
 
-        FragOut Frag4X(Varyings input) : SV_Target
+        FragOut Frag4X(Varyings input)
         {
             FragOut fragOut;
-            fragOut.color = (_ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 0)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 1)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 2)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 3)) * 0.25f;
+            int2 msTex = int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y);
+            fragOut.color = (_ColorTextureMS.Load(msTex, 0) + _ColorTextureMS.Load(msTex, 1)
+                            + _ColorTextureMS.Load(msTex, 2) + _ColorTextureMS.Load(msTex, 3)) * 0.25f;
             return fragOut;
         }
 
-        FragOut Frag8X(Varyings input) : SV_Target
+        FragOut Frag8X(Varyings input)
         {
             FragOut fragOut;
-            fragOut.color = (_ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 0)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 1)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 2)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 3)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 4)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 5)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 6)
-            + _ColorTextureMS.Load(int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y), 7)) * 0.125f;
+            int2 msTex = int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y);
+            fragOut.color = (_ColorTextureMS.Load(msTex, 0) + _ColorTextureMS.Load(msTex, 1)
+                            + _ColorTextureMS.Load(msTex, 2) + _ColorTextureMS.Load(msTex, 3)
+                            + _ColorTextureMS.Load(msTex, 4) + _ColorTextureMS.Load(msTex, 5)
+                            + _ColorTextureMS.Load(msTex, 6) + _ColorTextureMS.Load(msTex, 7)) * 0.125f;
             return fragOut;
         }
     ENDHLSL

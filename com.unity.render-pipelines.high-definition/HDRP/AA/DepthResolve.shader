@@ -6,7 +6,13 @@ Shader "Hidden/HDRenderPipeline/DepthResolve"
         #include "CoreRP/ShaderLibrary/Common.hlsl"
         #include "../ShaderVariables.hlsl"
 
+        // Target multisampling texture
         Texture2DMS<float> _DepthTextureMS;
+
+        // Different resolving approaches
+        #define RESOLVE_MAX
+        // #define RESOLVE_MIN
+        // #define RESOLVE_AVERAGE
 
         struct Attributes
         {
@@ -37,42 +43,71 @@ Shader "Hidden/HDRenderPipeline/DepthResolve"
         {
             FragOut fragOut;
             fragOut.color = float4(0.0, 0.0, 0.0, 1.0);
-            fragOut.depth = _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696), 0).x;
+            int2 msTex = int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y);
+            fragOut.depth = _DepthTextureMS.Load(msTex, 0).x;
             return fragOut;
         }
 
         FragOut Frag2X(Varyings input)
         {
             FragOut fragOut;
+            int2 msTex = int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y);
             fragOut.color = float4(0.0, 0.0, 0.0, 1.0);
-            fragOut.depth = (_DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696), 0).x
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696), 1)).x * 0.5f;
+        #if defined(RESOLVE_MAX)
+            fragOut.depth = max(_DepthTextureMS.Load(msTex, 0).x, _DepthTextureMS.Load(msTex, 1).x);
+        #elif defined(RESOLVE_MIN)
+            fragOut.depth = min(_DepthTextureMS.Load(msTex, 0).x, _DepthTextureMS.Load(msTex, 1).x);
+        #elif defined(RESOLVE_AVERAGE)
+            fragOut.depth = (_DepthTextureMS.Load(msTex, 0).x + _DepthTextureMS.Load(msTex, 1).x) * 0.5f;
+        #else
+            fragOut.depth = _DepthTextureMS.Load(msTex, 0).x;
+        #endif
             return fragOut;
         }
 
         FragOut Frag4X(Varyings input)
         {
             FragOut fragOut;
+            int2 msTex = int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y);
             fragOut.color = float4(0.0, 0.0, 0.0, 1.0);
-            fragOut.depth = (_DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 0)
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696), 1).x
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696), 2).x
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696), 3).x) * 0.25f;
+        #if defined(RESOLVE_MAX)
+            fragOut.depth = max(max(_DepthTextureMS.Load(msTex, 0).x, _DepthTextureMS.Load(msTex, 1).x),
+                            max(_DepthTextureMS.Load(msTex, 2).x, _DepthTextureMS.Load(msTex, 3).x));
+        #elif defined(RESOLVE_MIN)
+            fragOut.depth = min(min(_DepthTextureMS.Load(msTex, 0).x, _DepthTextureMS.Load(msTex, 1).x),
+                            min(_DepthTextureMS.Load(msTex, 2).x, _DepthTextureMS.Load(msTex, 3).x));
+        #elif defined(RESOLVE_AVERAGE)
+            fragOut.depth = (_DepthTextureMS.Load(msTex, 0).x + _DepthTextureMS.Load(msTex, 1).x
+                            + _DepthTextureMS.Load(msTex, 2).x + _DepthTextureMS.Load(msTex, 3).x) * 0.25f;
+        #else
+            fragOut.depth = _DepthTextureMS.Load(msTex, 0).x;
+        #endif
             return fragOut;
         }
 
         FragOut Frag8X(Varyings input)
         {
             FragOut fragOut;
+            int2 msTex = int2(input.texcoord.x * _ScreenSize.x, input.texcoord.y * _ScreenSize.y);
             fragOut.color = float4(0.0, 0.0, 0.0, 1.0);
-            fragOut.depth = (_DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 0)
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 1)
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 2)
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 3)
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 4)
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 5)
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 6)
-            + _DepthTextureMS.Load(int2(input.texcoord.x * 1238, input.texcoord.y * 696).x, 7)) * 0.125f;
+        #if defined(RESOLVE_MAX)
+            fragOut.depth = max(max(max(_DepthTextureMS.Load(msTex, 0).x, _DepthTextureMS.Load(msTex, 1).x),
+                            max(_DepthTextureMS.Load(msTex, 2).x, _DepthTextureMS.Load(msTex, 3).x)),
+                            max(max(_DepthTextureMS.Load(msTex, 4).x, _DepthTextureMS.Load(msTex, 5).x),
+                            max(_DepthTextureMS.Load(msTex, 6).x, _DepthTextureMS.Load(msTex, 7).x)));
+        #elif defined(RESOLVE_MIN)
+            fragOut.depth = min(min(min(_DepthTextureMS.Load(msTex, 0).x, _DepthTextureMS.Load(msTex, 1).x),
+                            min(_DepthTextureMS.Load(msTex, 2).x, _DepthTextureMS.Load(msTex, 3).x)),
+                            min(min(_DepthTextureMS.Load(msTex, 4).x, _DepthTextureMS.Load(msTex, 5).x),
+                            min(_DepthTextureMS.Load(msTex, 6).x, _DepthTextureMS.Load(msTex, 7).x)));
+        #elif defined(RESOLVE_AVERAGE)
+            fragOut.depth = (_DepthTextureMS.Load(msTex, 0).x + _DepthTextureMS.Load(msTex, 1).x
+                            + _DepthTextureMS.Load(msTex, 2).x + _DepthTextureMS.Load(msTex, 3).x
+                            + _DepthTextureMS.Load(msTex, 4).x + _DepthTextureMS.Load(msTex, 5).x
+                            + _DepthTextureMS.Load(msTex, 6).x + _DepthTextureMS.Load(msTex, 7).x) * 0.125f;
+        #else
+            fragOut.depth = _DepthTextureMS.Load(msTex, 0).x;
+        #endif
             return fragOut;
         }
     ENDHLSL
