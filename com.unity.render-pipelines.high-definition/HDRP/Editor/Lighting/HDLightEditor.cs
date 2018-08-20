@@ -143,30 +143,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         bool m_UpdateAreaLightEmissiveMeshComponents = false;
 
-        protected override void EnableGizmo()
-        {
-            switch (m_LightShape)
-            {
-                case LightShape.Directional:
-                case LightShape.Point:
-                    base.EnableGizmo();
-                    break;
-            }
-            //do nothing for others as we have our own gizmos
-        }
-
-        protected override void DisableGizmo()
-        {
-            switch (m_LightShape)
-            {
-                case LightShape.Directional:
-                case LightShape.Point:
-                    base.EnableGizmo();
-                    break;
-            }
-            //do nothing for others as we have our own gizmos
-        }
-
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -266,8 +242,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
             */
 
-            LightShape oldShape = m_LightShape;
-
             // New editor
             ApplyAdditionalComponentsVisibility(true);
             CheckStyles();
@@ -279,8 +253,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             DrawFoldout(m_AdditionalLightData.showFeatures, "Features", DrawFeatures);
             DrawFoldout(settings.lightType, "Shape", DrawShape);
             DrawFoldout(settings.intensity, "Light", DrawLightSettings);
-
-            ResolveLightShapeGizmo(oldShape);
 
             if (settings.shadowsType.enumValueIndex != (int)LightShadows.None)
                 DrawFoldout(settings.shadowsType, "Shadows", DrawShadows);
@@ -302,6 +274,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
             HDAdditionalLightData src = (HDAdditionalLightData)m_SerializedAdditionalLightData.targetObject;
             Light light = (Light)target;
+            
+            Handles.color = light.enabled ? LightEditor.kGizmoLight : LightEditor.kGizmoDisabledLight;
 
             switch (src.lightTypeExtent)
             {
@@ -316,14 +290,14 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                             switch (src.spotLightShape)
                             {
                                 case SpotLightShape.Cone:
-                                    //handle spot handles here;
+                                    CoreLightEditorUtilities.DrawSpotlightHandle(light, src.GetInnerSpotPercent01(), true);
                                     break;
                                 case SpotLightShape.Pyramid:
                                     float tanfov = Mathf.Tan(Mathf.Deg2Rad * light.spotAngle * 0.5f);
                                     float baseSize = light.range * tanfov * 2f;
                                     Vector2 size = src.aspectRatio > 1f ? new Vector2(baseSize * src.aspectRatio, baseSize) : new Vector2(baseSize, baseSize / src.aspectRatio);
                                     EditorGUI.BeginChangeCheck();
-                                    Vector2 newSize = Handles.RectHandle(light.transform.rotation, light.transform.position + light.transform.forward * light.range, size, true);
+                                    //Vector2 newSize = Handles.RectHandle(light.transform.rotation, light.transform.position + light.transform.forward * light.range, size, true);
 
                                     float newRange = light.range;
                                     Vector3 position = light.transform.position + light.transform.forward * light.range;
@@ -337,18 +311,18 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                                     
                                     if (EditorGUI.EndChangeCheck())
                                     {
-                                        Undo.RecordObjects(new UnityEngine.Object[] { target, src }, "Adjust Pyramid Spot Light");
-                                        float oldRatio = src.aspectRatio;
-                                        if (oldRatio >= 1 /*&& size.y > newSize.y*/)
-                                        {
-                                            light.spotAngle = 2f * Mathf.Rad2Deg * Mathf.Atan(0.5f * newSize.y / light.range);
-                                        }
-                                        else if (oldRatio <= 1/* && size.x > newSize.x*/)
-                                        {
-                                            light.spotAngle = 2f * Mathf.Rad2Deg * Mathf.Atan(0.5f * newSize.x / light.range);
-                                        }
-                                        src.aspectRatio = Mathf.Clamp(newSize.x / newSize.y, 0.05f, 20f);
-                                        light.range = newRange;
+                                        //Undo.RecordObjects(new UnityEngine.Object[] { target, src }, "Adjust Pyramid Spot Light");
+                                        //float oldRatio = src.aspectRatio;
+                                        //if (oldRatio >= 1 /*&& size.y > newSize.y*/)
+                                        //{
+                                        //    light.spotAngle = 2f * Mathf.Rad2Deg * Mathf.Atan(0.5f * newSize.y / light.range);
+                                        //}
+                                        //else if (oldRatio <= 1/* && size.x > newSize.x*/)
+                                        //{
+                                        //    light.spotAngle = 2f * Mathf.Rad2Deg * Mathf.Atan(0.5f * newSize.x / light.range);
+                                        //}
+                                        //src.aspectRatio = Mathf.Clamp(newSize.x / newSize.y, 0.05f, 20f);
+                                        //light.range = newRange;
                                     }
                                     break;
                                 case SpotLightShape.Box:
@@ -822,17 +796,6 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         }
 
-        void ResolveLightShapeGizmo(LightShape oldShape)
-        {
-            //see if legacy gizmo activation switched
-            bool haveLegacyGizmoForOldShape = oldShape == LightShape.Directional || oldShape == LightShape.Point;
-            bool haveLegacyGizmoForNewShape = m_LightShape == LightShape.Directional || m_LightShape == LightShape.Point;
-            if (haveLegacyGizmoForOldShape && !haveLegacyGizmoForNewShape)
-                base.DisableGizmo();
-            else if (!haveLegacyGizmoForOldShape && haveLegacyGizmoForNewShape)
-                base.EnableGizmo();
-        }
-
         [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
         static void DrawGizmoForHDAdditionalLightData(HDAdditionalLightData src, GizmoType gizmoType)
         {
@@ -842,38 +805,38 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             Color previousColor = Gizmos.color;
             Gizmos.color = light.enabled ? LightEditor.kGizmoLight : LightEditor.kGizmoDisabledLight;
 
-            switch (src.lightTypeExtent)
-            {
-                case LightTypeExtent.Punctual:
-                    switch (light.type)
-                    {
-                        case LightType.Directional:
-                        case LightType.Point:
-                            //handled by legacy
-                            break;
-                        case LightType.Spot:
-                            switch (src.spotLightShape)
-                            {
-                                case SpotLightShape.Cone:
-                                    CoreLightEditorUtilities.DrawSpotlightGizmo(light, src.GetInnerSpotPercent01(), selected);
-                                    break;
-                                case SpotLightShape.Pyramid:
-                                case SpotLightShape.Box:
-                                    HDLightEditorUtilities.DrawFrustumlightGizmo(light);
-                                    break;
-                            }
-                            break;
-                        case LightType.Rectangle:
-                        case LightType.Disc:
-                            //[TODO:] check what is the current state on area shape
-                            break;
-                    }
-                    break;
-                case LightTypeExtent.Rectangle:
-                case LightTypeExtent.Line:
-                    CoreLightEditorUtilities.DrawArealightGizmo(light);
-                    break;
-            }
+            //switch (src.lightTypeExtent)
+            //{
+            //    case LightTypeExtent.Punctual:
+            //        switch (light.type)
+            //        {
+            //            case LightType.Directional:
+            //            case LightType.Point:
+            //                //handled by legacy
+            //                break;
+            //            case LightType.Spot:
+            //                switch (src.spotLightShape)
+            //                {
+            //                    case SpotLightShape.Cone:
+            //                      CoreLightEditorUtilities.DrawSpotlightGizmo(light, src.GetInnerSpotPercent01(), selected);
+            //                        break;
+            //                    case SpotLightShape.Pyramid:
+            //                    case SpotLightShape.Box:
+            //                        HDLightEditorUtilities.DrawFrustumlightGizmo(light);
+            //                        break;
+            //                }
+            //                break;
+            //            case LightType.Rectangle:
+            //            case LightType.Disc:
+            //                //[TODO:] check what is the current state on area shape
+            //                break;
+            //        }
+            //        break;
+            //    case LightTypeExtent.Rectangle:
+            //    case LightTypeExtent.Line:
+            //        CoreLightEditorUtilities.DrawArealightGizmo(light);
+            //        break;
+            //}
 
             if (selected)
             {

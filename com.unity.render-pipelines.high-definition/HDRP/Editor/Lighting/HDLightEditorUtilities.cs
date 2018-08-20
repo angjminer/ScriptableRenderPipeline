@@ -18,7 +18,7 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             Gizmos.matrix = matrix;
             if (additionalLightData.spotLightShape == SpotLightShape.Pyramid)
             {
-                CoreLightEditorUtilities.DrawLightPyramidFrustum(Vector3.zero, frustumlight.spotAngle, frustumlight.range, 0.0f, additionalLightData.aspectRatio);
+                CoreLightEditorUtilities.DrawLightPyramidFrustumHandle(Vector3.zero, frustumlight.spotAngle, frustumlight.range, 0.0f, additionalLightData.aspectRatio);
             }
             else // Ortho frustum
             {
