@@ -135,6 +135,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
 
         const float k_MinAreaWidth = 0.01f; // Provide a small size of 1cm for line light
 
+        readonly CoreLightEditorUtilities.DrawInfo drawHandleInfo = new CoreLightEditorUtilities.DrawInfo();
+
         // Used for UI only; the processing code must use LightTypeExtent and LightType
         LightShape m_LightShape;
 

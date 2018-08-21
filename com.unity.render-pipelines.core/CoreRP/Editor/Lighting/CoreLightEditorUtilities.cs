@@ -7,6 +7,41 @@ namespace UnityEditor.Experimental.Rendering
 {
     public static class CoreLightEditorUtilities
     {
+        public struct DrawInfo
+        {
+            [Flags]
+            public enum Draw
+            {
+                WireFrame = 1,
+                Handle = 2,
+            }
+
+            public Draw draw;
+            public Color wireFrameColor;
+            public Color handleColor;
+            public bool isWireFrame { get { return (draw & Draw.WireFrame) > 0; } }
+            public bool isHandle { get { return (draw & Draw.Handle) > 0; } }
+            public DrawInfo(Color handleColor = default(Color), Color wireFrameColor = default(Color), Draw draw = Draw.WireFrame | Draw.Handle)
+            {
+                this.draw = draw;
+                this.wireFrameColor = wireFrameColor;
+                this.handleColor = handleColor;
+            }
+        }
+
+        static float SliderHandle(Vector3 position, Vector3 direction, float value)
+        {
+            Vector3 pos = position + direction * value;
+            float sizeHandle = HandleUtility.GetHandleSize(pos);
+            bool temp = GUI.changed;
+            GUI.changed = false;
+            position = Handles.Slider(pos, direction, sizeHandle * 0.03f, Handles.DotHandleCap, 0f);
+            if (GUI.changed)
+                value = Vector3.Dot(position - position, direction);
+            GUI.changed |= temp;
+            return value;
+        }
+
         private static Color GetLightHandleColor(Color wireframeColor)
         {
             Color color = wireframeColor;
@@ -37,19 +72,6 @@ namespace UnityEditor.Experimental.Rendering
                 pos = newPos;
             }
             Gizmos.DrawLine(pos, lastPos);
-        }
-
-        public static float SliderHandle(Vector3 position, Vector3 direction, float value)
-        {
-            Vector3 pos = position + direction * value;
-            float sizeHandle = HandleUtility.GetHandleSize(pos);
-            bool temp = GUI.changed;
-            GUI.changed = false;
-            position = Handles.Slider(pos, direction, sizeHandle * 0.03f, Handles.DotHandleCap, 0f);
-            if (GUI.changed)
-                value = Vector3.Dot(position - position, direction);
-            GUI.changed |= temp;
-            return value;
         }
 
 
@@ -136,10 +158,16 @@ namespace UnityEditor.Experimental.Rendering
 
         // Same as Gizmo.DrawFrustum except that when aspect is below one, fov represent fovX instead of fovY
         // Use to match our light frustum pyramid behavior
-        public static void DrawLightPyramidFrustumHandle(Vector3 center, float fov, ref float maxRange, ref float minRange, ref float aspect)
+        public static Vector4 DrawLightPyramidFrustumHandle(Vector3 center, Vector4 aspectMinRangeMaxRangeFov, bool useNearPlane, DrawInfo info)
         {
-            fov = Mathf.Deg2Rad * fov * 0.5f;
-            float tanfov = Mathf.Tan(fov);
+            if (!(info.isHandle | info.isWireFrame))
+                return aspectMinRangeMaxRangeFov;
+
+            float aspect = aspectMinRangeMaxRangeFov.x;
+            float minRange = aspectMinRangeMaxRangeFov.y;
+            float maxRange = aspectMinRangeMaxRangeFov.z;
+            float fov = aspectMinRangeMaxRangeFov.w;
+            float tanfov = Mathf.Tan(Mathf.Deg2Rad * fov * 0.5f);
             Vector3 farEnd = new Vector3(0, 0, maxRange);
             Vector3 endSizeX;
             Vector3 endSizeY;
@@ -160,96 +188,90 @@ namespace UnityEditor.Experimental.Rendering
             Vector3 e2 = farEnd - endSizeX + endSizeY;
             Vector3 e3 = farEnd - endSizeX - endSizeY;
             Vector3 e4 = farEnd + endSizeX - endSizeY;
-            if (minRange <= 0.0f)
+
+            using (new Handles.DrawingScope(info.wireFrameColor))
             {
-                s1 = s2 = s3 = s4 = center;
-            }
-            else
-            {
-                Vector3 startSizeX;
-                Vector3 startSizeY;
-                if (aspect >= 1.0f)
+                if (minRange <= 0.0f || !useNearPlane)
                 {
-                    startSizeX = new Vector3(minRange * tanfov * aspect, 0, 0);
-                    startSizeY = new Vector3(0, minRange * tanfov, 0);
+                    s1 = s2 = s3 = s4 = center;
                 }
                 else
                 {
-                    startSizeY = new Vector3(minRange * tanfov / aspect, 0, 0);
-                    startSizeX = new Vector3(0, minRange * tanfov, 0);
+                    Vector3 nearEnd = new Vector3(0, 0, minRange);
+
+                    Vector3 startSizeX;
+                    Vector3 startSizeY;
+                    if (aspect >= 1.0f)
+                    {
+                        startSizeX = new Vector3(minRange * tanfov * aspect, 0, 0);
+                        startSizeY = new Vector3(0, minRange * tanfov, 0);
+                    }
+                    else
+                    {
+                        startSizeX = new Vector3(minRange * tanfov, 0, 0);
+                        startSizeY = new Vector3(0, minRange * tanfov / aspect, 0);
+                    }
+                    Vector3 startPoint = center + nearEnd;
+                    s1 = startPoint + startSizeX + startSizeY;
+                    s2 = startPoint - startSizeX + startSizeY;
+                    s3 = startPoint - startSizeX - startSizeY;
+                    s4 = startPoint + startSizeX - startSizeY;
+
+                    if (info.isWireFrame)
+                    {
+                        Handles.DrawLine(s1, s2);
+                        Handles.DrawLine(s2, s3);
+                        Handles.DrawLine(s3, s4);
+                        Handles.DrawLine(s4, s1);
+                    }
                 }
-                Vector3 startPoint = center;
-                s1 =    startPoint + startSizeX + startSizeY;
-                s2 =    startPoint - startSizeX + startSizeY;
-                s3 =    startPoint - startSizeX - startSizeY;
-                s4 =    startPoint + startSizeX - startSizeY;
-                Handles.DrawLine(s1, s2);
-                Handles.DrawLine(s2, s3);
-                Handles.DrawLine(s3, s4);
-                Handles.DrawLine(s4, s1);
+
+                if (info.isWireFrame)
+                {
+                    Handles.DrawLine(e1, e2);
+                    Handles.DrawLine(e2, e3);
+                    Handles.DrawLine(e3, e4);
+                    Handles.DrawLine(e4, e1);
+
+                    Handles.DrawLine(s1, e1);
+                    Handles.DrawLine(s2, e2);
+                    Handles.DrawLine(s3, e3);
+                    Handles.DrawLine(s4, e4);
+                }
             }
-
-            Handles.DrawLine(e1, e2);
-            Handles.DrawLine(e2, e3);
-            Handles.DrawLine(e3, e4);
-            Handles.DrawLine(e4, e1);
-
-            Handles.DrawLine(s1, e1);
-            Handles.DrawLine(s2, e2);
-            Handles.DrawLine(s3, e3);
-            Handles.DrawLine(s4, e4);
-
-
-
-
-            Handles.color = GetLightHandleColor(Handles.color);
-
-            if(minRange > 0f)
+            
+            if (info.isHandle)
             {
-                float x = (s1.x - s2.x) * 0.5f;
-                float y = (s1.x - s2.x) * 0.5f;
-                x = SliderHandle(center, Vector3.right, x);
-                x = SliderHandle(center, Vector3.left, x);
-                y = SliderHandle(center, Vector3.up, y);
-                y = SliderHandle(center, Vector3.down, y);
+                using (new Handles.DrawingScope(info.handleColor))
+                {
+                    if(useNearPlane)
+                    {
+                        minRange = SliderHandle(center, Vector3.forward, minRange);
+                    }
+                    
+                    maxRange = SliderHandle(center, Vector3.forward, maxRange);
 
+                    float endHalfWidth = (e1.x - e2.x) * 0.5f;
+                    float endHalfHeight = (e1.y - e4.y) * 0.5f;
+
+                    endHalfHeight = SliderHandle(farEnd, Vector3.up, endHalfHeight);
+                    endHalfHeight = SliderHandle(farEnd, Vector3.down, endHalfHeight);
+                    endHalfWidth = SliderHandle(farEnd, Vector3.right, endHalfWidth);
+                    endHalfWidth = SliderHandle(farEnd, Vector3.left, endHalfWidth);
+                    
+                    if (aspect >= 1 /*&& size.y > newSize.y*/)
+                    {
+                        fov = 2f * Mathf.Rad2Deg * Mathf.Atan(0.5f * endHalfHeight / maxRange);
+                    }
+                    else if (aspect <= 1/* && size.x > newSize.x*/)
+                    {
+                        fov = 2f * Mathf.Rad2Deg * Mathf.Atan(0.5f * endHalfWidth / maxRange);
+                    }
+                    aspect = endHalfWidth / endHalfHeight;
+                }
             }
 
-            //draw max handles
-            float halfWidth = 0.5f * size.x;
-            float halfHeight = 0.5f * size.y;
-
-            if (!handlesOnly)
-            {
-                Vector3 topRight = position + Vector3.up * halfHeight + Vector3.right * halfWidth;
-                Vector3 bottomRight = position - Vector3.up * halfHeight + Vector3.right * halfWidth;
-                Vector3 bottomLeft = position - Vector3.up * halfHeight - Vector3.right * halfWidth;
-                Vector3 topLeft = position + Vector3.up * halfHeight - Vector3.right * halfWidth;
-
-                // Draw rectangle
-                DrawLine(topRight, bottomRight);
-                DrawLine(bottomRight, bottomLeft);
-                DrawLine(bottomLeft, topLeft);
-                DrawLine(topLeft, topRight);
-            }
-
-            // Give handles twice the alpha of the lines
-            Color origCol = color;
-            Color col = color;
-            col.a = Mathf.Clamp01(color.a * 2);
-            color = ToActiveColorSpace(col);
-
-            // Draw handles
-            halfHeight = SizeSlider(position, up, halfHeight);
-            halfHeight = SizeSlider(position, -up, halfHeight);
-            halfWidth = SizeSlider(position, right, halfWidth);
-            halfWidth = SizeSlider(position, -right, halfWidth);
-
-            size.x = Mathf.Max(0f, 2.0f * halfWidth);
-            size.y = Mathf.Max(0f, 2.0f * halfHeight);
-
-            color = origCol;
-
+            return new Vector4(aspect, minRange, maxRange, fov);
         }
 
         public static void DrawLightOrthoFrustum(Vector3 center, float width, float height, float maxRange, float minRange)
